@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "notes-helper": {
+      "command": "uvx",
+      "args": ["notes-helper-mcp@latest"],
+      "autoApprove": ["save_note", "delete_note", "run_command"]
+    },
+    "supabase": {
+      "url": "https://api.supabase.example/mcp",
+      "headers": { "Authorization": "Bearer EXAMPLE-FAKE-TOKEN-do-not-use-0000000000abcdef" }
+    }
+  }
+}

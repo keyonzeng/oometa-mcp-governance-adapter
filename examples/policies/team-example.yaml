@@ -1,0 +1,61 @@
+# A hand-authored team policy showing richer, real-world rules.
+# Apply it with:  MCPCP_POLICY=examples/policies/team-example.yaml mcpcp policy show
+version: 1
+name: acme-team
+description: Acme platform team policy for governed MCP adoption.
+default_effect: require_approval        # unknown calls need a human
+settings:
+  unapproved_server_effect: deny        # never touch a server we haven't reviewed
+  redact_secrets: true
+
+rules:
+  # 1) Hard stops — highest priority.
+  - id: deny-exec-everywhere
+    description: No raw command/code execution through MCP, ever.
+    effect: deny
+    priority: 100
+    reason: Command/code execution is forbidden by platform policy
+    when:
+      capabilities_any: [process.exec, code.execution]
+
+  - id: deny-secret-paths
+    description: Block arguments that reference secret files.
+    effect: deny
+    priority: 95
+    reason: Argument references credential material
+    when:
+      arg_matches:
+        - field: "*"
+          regex: "(?i)(/\\.ssh/|id_rsa|\\.env\\b|/\\.aws/|BEGIN .*PRIVATE KEY)"
+          description: secret file / private key in arguments
+
+  # 2) Finance is special — every charge needs sign-off, refunds too.
+  - id: finance-needs-approval
+    description: Payments tools always require approval, even when approved.
+    effect: require_approval
+    priority: 80
+    reason: Financial operations require explicit human approval
+    when:
+      server_tags_any: [finance]
+      capabilities_any: [payment, destructive]
+
+  # 3) Let the documentation server's read tools flow freely.
+  - id: allow-docs-readonly
+    description: Read-only docs tooling is low risk.
+    effect: allow
+    priority: 50
+    reason: Read-only documentation access
+    when:
+      server_name: ["docs-*", "confluence"]
+      capabilities_none: [filesystem.write, database.write, payment, destructive]
+
+  # 4) General read-only allowance on reviewed servers.
+  - id: allow-readonly-approved
+    description: Read-only tools on approved servers.
+    effect: allow
+    priority: 40
+    reason: Read-only tool on an approved server
+    when:
+      server_status: [approved]
+      capabilities_none:
+        [filesystem.write, database.write, process.exec, code.execution, payment, destructive, messaging.send, secrets]

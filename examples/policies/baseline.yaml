@@ -1,0 +1,122 @@
+# mcp-control-plane policy — generated from the built-in 'baseline' template.
+# Edit freely; see docs/policy-model.md for the full schema.
+version: 1
+name: baseline
+description: 'Secure-by-default baseline: allow read-only tools on approved servers,
+  require approval for state-changing tools, deny raw command execution and obvious
+  secret exfiltration.'
+default_effect: require_approval
+settings:
+  unapproved_server_effect: require_approval
+  redact_secrets: true
+rules:
+- id: deny-command-execution
+  description: Block arbitrary command/code execution over MCP
+  effect: deny
+  when:
+    server_status: null
+    server_name: null
+    server_tags_any: null
+    tool_name: null
+    agent: null
+    capabilities_any:
+    - process.exec
+    - code.execution
+    capabilities_all: null
+    capabilities_none: null
+    risk_at_least: null
+    arg_matches: null
+  reason: Raw command or code execution via MCP is not permitted
+  priority: 100
+  risk: null
+  obligations: []
+- id: deny-secret-exfiltration
+  description: Block tool calls whose arguments reference sensitive paths/material
+  effect: deny
+  when:
+    server_status: null
+    server_name: null
+    server_tags_any: null
+    tool_name: null
+    agent: null
+    capabilities_any: null
+    capabilities_all: null
+    capabilities_none: null
+    risk_at_least: null
+    arg_matches:
+    - field: '*'
+      regex: (?i)(/\.ssh/|id_rsa|\.env\b|/\.aws/|BEGIN (RSA |EC |OPENSSH )?PRIVATE
+        KEY)
+      description: argument references secret files / private keys
+  reason: Argument references a sensitive path or credential material
+  priority: 95
+  risk: null
+  obligations: []
+- id: approve-poisoned-tools
+  description: Quarantine tools flagged with prompt-injection findings
+  effect: require_approval
+  when:
+    server_status: null
+    server_name: null
+    server_tags_any: null
+    tool_name: null
+    agent: null
+    capabilities_any: null
+    capabilities_all: null
+    capabilities_none: null
+    risk_at_least: critical
+    arg_matches: null
+  reason: Tool was flagged for possible poisoning; needs human review
+  priority: 90
+  risk: critical
+  obligations: []
+- id: approve-destructive-and-spend
+  description: Require approval for destructive, financial or outbound-messaging tools
+  effect: require_approval
+  when:
+    server_status: null
+    server_name: null
+    server_tags_any: null
+    tool_name: null
+    agent: null
+    capabilities_any:
+    - destructive
+    - payment
+    - messaging.send
+    - database.write
+    - filesystem.write
+    capabilities_all: null
+    capabilities_none: null
+    risk_at_least: null
+    arg_matches: null
+  reason: High-impact action (write/destroy/pay/send) requires approval
+  priority: 70
+  risk: null
+  obligations: []
+- id: allow-readonly-on-approved
+  description: Allow read-only tools on approved servers
+  effect: allow
+  when:
+    server_status:
+    - approved
+    server_name: null
+    server_tags_any: null
+    tool_name: null
+    agent: null
+    capabilities_any: null
+    capabilities_all: null
+    capabilities_none:
+    - filesystem.write
+    - database.write
+    - process.exec
+    - code.execution
+    - payment
+    - destructive
+    - messaging.send
+    - secrets
+    risk_at_least: null
+    arg_matches: null
+  reason: Read-only tool on an approved server
+  priority: 40
+  risk: null
+  obligations: []
