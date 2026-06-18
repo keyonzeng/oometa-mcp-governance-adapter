@@ -54,6 +54,11 @@ Issues = "https://github.com/TWe1v3/mcp-control-plane/issues"
 [project.scripts]
 mcpcp = "mcp_control_plane.cli.main:app"
 
+[tool.hatch.build.targets.sdist]
+# Keep the sdist lean: the dashboard screenshots (~4MB) are only needed for the
+# rendered README on GitHub, not for installation.
+exclude = ["docs/img/*.png"]
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/mcp_control_plane"]
 # Dashboard static assets live inside the package dir and are included as

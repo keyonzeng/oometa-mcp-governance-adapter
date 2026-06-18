@@ -20,7 +20,7 @@
 > **MCP is becoming the plugin layer for AI agents.** But most teams have *zero* visibility or control over which MCP servers are installed, what tools they expose, what credentials they can reach, which agents call them, and whether those calls should be allowed. `mcp-control-plane` is the governance layer that turns chaotic MCP adoption into governed MCP adoption — without locking you into any single agent or model.
 
 <div align="center">
-<img src="docs/img/dashboard-overview.png" alt="mcp-control-plane dashboard — overview" width="900">
+<img src="https://raw.githubusercontent.com/TWe1v3/mcp-control-plane/main/docs/img/dashboard-overview.png" alt="mcp-control-plane dashboard — overview" width="900">
 </div>
 
 ## ✨ What it gives you
@@ -131,7 +131,7 @@ A developer team adopts MCP organically. Six weeks later:
 The decision logic lives in one transport-agnostic *mediator*, so adding a new MCP transport (HTTP, future transports) means writing a thin byte-shuttling adapter — the security logic is defined and tested once. See [architecture](docs/architecture.md).
 
 <div align="center">
-<img src="docs/img/dashboard-policy.png" alt="Explainable policy decision with full trace" width="900">
+<img src="https://raw.githubusercontent.com/TWe1v3/mcp-control-plane/main/docs/img/dashboard-policy.png" alt="Explainable policy decision with full trace" width="900">
 <br><em>Every decision is explainable: ask "what would happen if agent X called tool Y with these args?" and see the rule-by-rule trace.</em>
 </div>
 
@@ -197,7 +197,7 @@ Built-in templates: `baseline`, `strict` (deny-by-default), `permissive-demo`. W
 The scanner discovers MCP servers across **Claude Desktop, Claude Code, Cursor, VS Code, Cline, Windsurf, Continue, Zed, and Goose**, and flags unsafe configuration before a server is ever launched:
 
 <div align="center">
-<img src="docs/img/dashboard-scan.png" alt="Static configuration risk scan" width="900">
+<img src="https://raw.githubusercontent.com/TWe1v3/mcp-control-plane/main/docs/img/dashboard-scan.png" alt="Static configuration risk scan" width="900">
 </div>
 
 It catches hardcoded credentials (`MCP-SEC-001`), bearer tokens in headers (`MCP-SEC-004`), plaintext HTTP/ngrok transports (`MCP-NET-001`), remote code pulled on every launch (`MCP-SUP-001`), shell-injection-prone commands (`MCP-CMD-001`), and human-in-the-loop bypasses like Cline `autoApprove` (`MCP-HIL-001`) — each with a concrete remediation.
