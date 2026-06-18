@@ -40,9 +40,7 @@
 ## 🚀 Quickstart
 
 ```bash
-# Install from source (PyPI release coming soon). Python 3.11+
-pipx install git+https://github.com/TWe1v3/mcp-control-plane.git
-# …or for development:  git clone … && pip install -e ".[dev]"
+pip install mcp-control-plane          # Python 3.11+  (or: pipx install mcp-control-plane)
 
 # 1. See what's already on this machine — no setup required
 mcpcp scan
@@ -206,7 +204,6 @@ Drop it into CI to fail a PR that commits an unsafe MCP config:
 
 ```yaml
 # .github/workflows/mcp-config-scan.yml
-# Until the PyPI release: pip install git+https://github.com/TWe1v3/mcp-control-plane.git
 - run: pip install mcp-control-plane
 - run: mcpcp scan --ci --project . --fail-on high
 ```
