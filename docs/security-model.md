@@ -86,7 +86,11 @@ evt₂  prev=hash₁  hash₂ = H(payload₂ + hash₁)
 - The **control plane** is the trust anchor. Compromise of the host running it is out of scope for these mechanisms.
 - The **agent / MCP client** is semi-trusted: it is the thing being protected, but it can be manipulated by a poisoned tool description. The control plane's job is to keep the agent's *actions* governable even when its judgment is compromised.
 - The **upstream MCP server** is untrusted third-party code. The gateway governs *which calls reach it* and *redacts what comes back*, but does not sandbox what it does with an allowed call.
-- The **API surface** is a trust boundary controlled by `MCPCP_API_TOKEN`: localhost-only until a token is set, bearer-gated after.
+- The **API surface** is a trust boundary controlled by `MCPCP_API_TOKEN`: localhost-only until a token is set, bearer-gated after. This is *enforced*, not advisory — with no token set, an HTTP middleware (`api/app.py`) rejects any non-loopback client with `403`, and `mcpcp serve` refuses to bind to a non-local host without a token (override with `--insecure`).
+
+## Approval grants
+
+When the policy engine returns `require_approval`, the gateway parks the call and creates an `Approval`. Approving it creates a **grant** bound to the exact `(server, tool, arguments digest, agent, principal)` and valid for `settings.approval_grant_ttl_seconds` (default 600s). An identical retry within that window is forwarded by the gateway via the grant — so "approve then retry" actually works — while *any* deviation (different arguments, tool, or caller) requires its own approval. A denied approval never becomes a grant.
 
 ---
 

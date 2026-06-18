@@ -127,6 +127,9 @@ class MCPServer(BaseModel):
     risk: RiskLevel = RiskLevel.LOW
     risk_score: int = 0
     risk_factors: list[str] = Field(default_factory=list)
+    # Static configuration findings carried over from the scanner (kept separate
+    # from runtime tool risk). Each item: {code,title,severity,detail,remediation}.
+    config_findings: list[dict[str, Any]] = Field(default_factory=list)
 
     tools: list[MCPTool] = Field(default_factory=list)
 
@@ -223,12 +226,26 @@ class Approval(BaseModel):
     server_name: str | None = None
     tool: str | None = None
     arguments_preview: dict[str, Any] = Field(default_factory=dict)
+    # Exact-argument digest so an approval can be matched on retry (a *grant*),
+    # rather than re-prompting for an identical call.
+    arguments_digest: str | None = None
     reason: str = ""
     risk: RiskLevel = RiskLevel.MEDIUM
     requested_at: datetime = Field(default_factory=utcnow)
     decided_at: datetime | None = None
     decided_by: str | None = None
     decision_note: str | None = None
+    # When approved, the grant is valid (re-usable for the identical call) until
+    # this time. None means not yet granted.
+    expires_at: datetime | None = None
+
+    def is_active_grant(self, now: datetime | None = None) -> bool:
+        now = now or utcnow()
+        return (
+            self.status == ApprovalStatus.APPROVED
+            and self.expires_at is not None
+            and self.expires_at > now
+        )
 
 
 # --------------------------------------------------------------------------- #

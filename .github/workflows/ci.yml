@@ -38,5 +38,12 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -e .
-      - name: Scan committed MCP configs
-        run: mcpcp scan --no-user --project examples/configs --fail-on critical
+      - name: Safe fixtures must pass
+        run: mcpcp scan --no-user --project examples/configs-safe --fail-on high
+      - name: Unsafe fixtures must be flagged (negative test)
+        run: |
+          if mcpcp scan --ci --no-user --project examples/configs --fail-on high; then
+            echo "::error::scanner failed to flag known-unsafe example configs"
+            exit 1
+          fi
+          echo "scanner correctly flagged the unsafe example configs"

@@ -142,7 +142,25 @@ class GatewayMediator:
             self.plane.audit.record_decision(ctx, decision, outcome="blocked", latency_ms=latency)
             return CallOutcome(Verdict.BLOCK, decision, message=decision.reason)
 
-        # REQUIRE_APPROVAL
+        # REQUIRE_APPROVAL — first honour an existing grant for this exact call,
+        # so an approved request can actually be retried (see security model).
+        grant = self.plane.approvals.find_active_grant(ctx)
+        if grant is not None:
+            self.plane.audit.record_decision(ctx, decision, outcome="ok", latency_ms=latency)
+            self.plane.audit.record_event(
+                "approval",
+                agent=ctx.agent,
+                principal=ctx.principal,
+                server_id=ctx.server.id,
+                server_name=ctx.server.name,
+                tool=ctx.tool.name,
+                reason=f"forwarded via active grant {grant.id}",
+                risk=decision.risk,
+                outcome="ok",
+                detail={"approval_id": grant.id},
+            )
+            return CallOutcome(Verdict.APPROVED, decision, approval_id=grant.id)
+
         approval = self.plane.approvals.request(ctx, decision)
         self.plane.audit.record_decision(ctx, decision, outcome="pending", latency_ms=latency)
 

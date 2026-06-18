@@ -28,7 +28,7 @@
 | | Subsystem | What it does |
 |---|---|---|
 | 📇 | **Registry** | An inventory of every MCP server, reviewed and risk-scored. Approve, reject, or quarantine. |
-| 🚦 | **Gateway** | A transparent MCP proxy that enforces policy on every `tools/call`. Agent- and transport-agnostic. |
+| 🚦 | **Gateway** | A transparent MCP proxy that enforces policy on every `tools/call`. **stdio transport today** (HTTP planned); the decision core is transport-agnostic. |
 | 📜 | **Policy engine** | Policy-as-code (reviewable YAML) deciding **allow / deny / require-approval**, with a full explainable trace. |
 | ✋ | **Approvals** | Human-in-the-loop gate for risky operations — explicit approval over hidden automation. |
 | 🧾 | **Audit** | A tamper-evident, hash-chained log of every decision. `mcpcp audit verify` detects edits. |
@@ -40,7 +40,9 @@
 ## 🚀 Quickstart
 
 ```bash
-pip install mcp-control-plane        # Python 3.11+  (or: pipx install mcp-control-plane)
+# Install from source (PyPI release coming soon). Python 3.11+
+pipx install git+https://github.com/TWe1v3/mcp-control-plane.git
+# …or for development:  git clone … && pip install -e ".[dev]"
 
 # 1. See what's already on this machine — no setup required
 mcpcp scan
@@ -204,6 +206,7 @@ Drop it into CI to fail a PR that commits an unsafe MCP config:
 
 ```yaml
 # .github/workflows/mcp-config-scan.yml
+# Until the PyPI release: pip install git+https://github.com/TWe1v3/mcp-control-plane.git
 - run: pip install mcp-control-plane
 - run: mcpcp scan --ci --project . --fail-on high
 ```

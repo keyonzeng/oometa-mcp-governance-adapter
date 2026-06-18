@@ -54,3 +54,37 @@ def test_redaction_obligation_applied(plane):
     out = m.apply_obligations(d, "key is sk-ant-aaaaaaaaaaaaaaaaaaaaaaaa done")
     assert "redacted" in out
     assert "sk-ant-" not in out
+
+
+def test_approved_grant_allows_identical_retry(plane):
+    s = MCPServer(name="pay", status=ServerStatus.APPROVED,
+                  tools=[MCPTool(name="create_charge", description="Charge a customer's card for an amount")])
+    s = plane.registry.register(s)
+    plane.registry.approve(s.id, by="t")
+    m = GatewayMediator(plane, "pay", agent="agentX", approval_mode="deny")
+
+    out1 = m.authorize_call("create_charge", {"amount": 4999})
+    assert out1.verdict == Verdict.BLOCK and out1.approval_id
+
+    plane.approvals.decide(out1.approval_id, True, by="reviewer")
+
+    out2 = m.authorize_call("create_charge", {"amount": 4999})
+    assert out2.verdict == Verdict.APPROVED   # retry now forwarded via grant
+    assert out2.approval_id == out1.approval_id
+
+    # A *different* argument set is NOT covered by the grant.
+    out3 = m.authorize_call("create_charge", {"amount": 1})
+    assert out3.verdict == Verdict.BLOCK
+    assert out3.approval_id != out1.approval_id
+
+
+def test_denied_approval_is_not_a_grant(plane):
+    s = MCPServer(name="pay2", status=ServerStatus.APPROVED,
+                  tools=[MCPTool(name="create_charge", description="Charge a customer's card for an amount")])
+    s = plane.registry.register(s)
+    plane.registry.approve(s.id, by="t")
+    m = GatewayMediator(plane, "pay2", agent="a", approval_mode="deny")
+    out1 = m.authorize_call("create_charge", {"amount": 5})
+    plane.approvals.decide(out1.approval_id, False, by="reviewer")  # denied
+    out2 = m.authorize_call("create_charge", {"amount": 5})
+    assert out2.verdict == Verdict.BLOCK

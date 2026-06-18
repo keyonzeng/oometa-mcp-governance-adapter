@@ -34,3 +34,16 @@ def test_unchanged_reregister_preserves_approval(plane):
     plane.registry.approve(s.id, by="tester")
     s2 = plane.registry.register(_srv())
     assert s2.status == ServerStatus.APPROVED
+
+
+def test_scanner_findings_raise_registry_risk(plane):
+    from mcp_control_plane.models import RiskLevel
+    server = MCPServer(name="github", command="npx", args=["-y", "server-github"])  # no tools
+    findings = [
+        {"code": "MCP-SEC-001", "title": "Hardcoded credential in config",
+         "severity": "critical", "detail": "...", "remediation": "..."},
+    ]
+    s = plane.registry.register(server, config_findings=findings)
+    assert s.risk == RiskLevel.CRITICAL          # not silently low
+    assert s.config_findings and s.config_findings[0]["code"] == "MCP-SEC-001"
+    assert any("MCP-SEC-001" in f for f in s.risk_factors)

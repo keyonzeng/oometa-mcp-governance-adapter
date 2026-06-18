@@ -1,0 +1,5 @@
+{
+  "servers": {
+    "docs": { "command": "node", "args": ["./vendor/docs-mcp/server.js"], "env": { "DOCS_TOKEN": "${DOCS_TOKEN}" } }
+  }
+}

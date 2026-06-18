@@ -81,6 +81,23 @@ class RegistryService:
             factors.append("no tools enumerated yet (unknown surface)")
             score += 5
 
+        # Static configuration findings from the scanner (kept distinct from
+        # runtime tool risk) raise the score and impose a floor on the level, so
+        # a critical config issue can never read as a low-risk registry entry.
+        finding_weight = {"info": 0, "low": 4, "medium": 10, "high": 22, "critical": 40}
+        worst_finding = RiskLevel.INFO
+        for f in server.config_findings:
+            sev = str(f.get("severity", "info"))
+            score += finding_weight.get(sev, 0)
+            if sev not in ("info",):
+                factors.append(f"config: {f.get('code', '?')} {f.get('title', '')}".strip())
+            try:
+                lvl = RiskLevel(sev)
+                if lvl.score > worst_finding.score:
+                    worst_finding = lvl
+            except ValueError:
+                pass
+
         score = min(score, 100)
         level = (
             RiskLevel.CRITICAL
@@ -91,18 +108,31 @@ class RegistryService:
             if score >= 25
             else RiskLevel.LOW
         )
+        # Never let a registry entry read safer than its worst static finding.
+        if worst_finding.score > level.score:
+            level = worst_finding
         return level, score, factors
 
     # ----- register / review --------------------------------------------- #
     def register(
-        self, server: MCPServer, *, on_fingerprint_change: str = "flag"
+        self,
+        server: MCPServer,
+        *,
+        on_fingerprint_change: str = "flag",
+        config_findings: list | None = None,
     ) -> MCPServer:
         """Register or update a server.
 
         ``on_fingerprint_change`` controls rug-pull handling when a server with
         the same name already exists: ``flag`` (default, reset to pending +
         record), ``error`` (raise), or ``ignore``.
+
+        ``config_findings`` are static scanner findings (``ConfigFinding`` or
+        dicts) to fold into the server's risk so a dangerous config cannot be
+        registered as low-risk.
         """
+        if config_findings:
+            server.config_findings = [_finding_to_dict(f) for f in config_findings]
         existing = self.db.find_server_by_name(server.name)
         server = self.enrich(server)
 
@@ -178,3 +208,25 @@ class RegistryService:
 
     def list(self, status: ServerStatus | None = None) -> list[MCPServer]:
         return self.db.list_servers(status)
+
+
+def _finding_to_dict(f) -> dict:
+    """Normalise a ConfigFinding (dataclass) or dict to a stored finding dict."""
+    if isinstance(f, dict):
+        sev = f.get("severity")
+        sev = sev.value if hasattr(sev, "value") else (sev or "info")
+        return {
+            "code": f.get("code", "?"),
+            "title": f.get("title", ""),
+            "severity": sev,
+            "detail": f.get("detail", ""),
+            "remediation": f.get("remediation", ""),
+        }
+    sev = getattr(f, "severity", None)
+    return {
+        "code": getattr(f, "code", "?"),
+        "title": getattr(f, "title", ""),
+        "severity": sev.value if hasattr(sev, "value") else (sev or "info"),
+        "detail": getattr(f, "detail", ""),
+        "remediation": getattr(f, "remediation", ""),
+    }

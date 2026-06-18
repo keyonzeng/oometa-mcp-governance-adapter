@@ -58,7 +58,18 @@ def seed(plane: ControlPlane | None = None) -> dict:
             ("create_or_update_file", "Create or update a file in a repo (write)."),
         ),
     )
-    gh = plane.registry.register(gh)
+    gh = plane.registry.register(
+        gh,
+        config_findings=[
+            {
+                "code": "MCP-SEC-002",
+                "title": "Possible inlined secret",
+                "severity": "high",
+                "detail": "env 'GITHUB_PERSONAL_ACCESS_TOKEN' holds a long literal value.",
+                "remediation": "Reference an env var (e.g. \"${GITHUB_TOKEN}\") instead of the literal.",
+            }
+        ],
+    )
     plane.registry.approve(gh.id, by="alice@team", note="Approved for the platform org only")
     created.append(gh.name)
 
@@ -97,7 +108,18 @@ def seed(plane: ControlPlane | None = None) -> dict:
             ("export_customers", "Export customer records to a file."),
         ),
     )
-    plane.registry.register(shadow)
+    plane.registry.register(
+        shadow,
+        config_findings=[
+            {
+                "code": "MCP-NET-001",
+                "title": "Plaintext HTTP transport",
+                "severity": "high",
+                "detail": "connects to an ngrok tunnel over unencrypted http://.",
+                "remediation": "Use https:// and review/approve the server before use.",
+            }
+        ],
+    )
     created.append(shadow.name)
 
     # 5) Payments server (high impact), approved.

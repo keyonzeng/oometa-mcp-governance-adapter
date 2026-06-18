@@ -57,6 +57,9 @@ rules:
 |-------|------|---------|---------|
 | `unapproved_server_effect` | `allow` \| `deny` \| `require_approval` | `require_approval` | What an ALLOW is downgraded to when the target server's status is not `approved`. |
 | `redact_secrets` | bool | `true` | When a surviving ALLOW targets a tool with the `secrets` capability, attach a `redact:secrets` obligation. |
+| `approval_grant_ttl_seconds` | int | `600` | How long an approval stays a re-usable grant for the *identical* call (same server/tool/arguments/agent), so an approved request can be retried. |
+
+> The built-in `baseline` policy includes an `approve-unknown-capability` rule (priority 60): a tool whose capability is `unknown` is held for approval even on an approved server, consistent with "unknown = not-yet-trusted".
 
 ### `rules[]`
 

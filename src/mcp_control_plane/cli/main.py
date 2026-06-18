@@ -111,6 +111,9 @@ def serve(
     host: str | None = typer.Option(None, help="Bind host (default 127.0.0.1)."),
     port: int | None = typer.Option(None, help="Bind port (default 8765)."),
     reload: bool = typer.Option(False, help="Auto-reload (development)."),
+    insecure: bool = typer.Option(
+        False, "--insecure", help="Allow a non-local bind without a token (NOT recommended)."
+    ),
 ) -> None:
     """Start the control-plane API + dashboard."""
     import uvicorn
@@ -118,11 +121,14 @@ def serve(
     plane = _plane()
     h = host or plane.settings.api_host
     p = port or plane.settings.api_port
-    if not plane.settings.api_token and h not in ("127.0.0.1", "localhost", "::1"):
+    non_local = h not in ("127.0.0.1", "localhost", "::1", "")
+    if non_local and not plane.settings.api_token and not insecure:
         err.print(
-            "[bold yellow]warning:[/] binding to a non-local host without "
-            "MCPCP_API_TOKEN set. Set a token before exposing the dashboard."
+            f"[bold red]refusing to bind to non-local host '{h}' without a token.[/]\n"
+            "Set MCPCP_API_TOKEN to require authentication, or pass --insecure to "
+            "override (the API will still reject non-local clients until a token is set)."
         )
+        raise typer.Exit(2)
     console.print(f"[cyan]mcp-control-plane[/] dashboard → http://{h}:{p}")
     uvicorn.run("mcp_control_plane.api.app:create_app", host=h, port=p, factory=True, reload=reload)
 
@@ -155,7 +161,8 @@ def scan(
     if register:
         plane = _plane()
         for r in report.results:
-            plane.registry.register(r.server)
+            findings = [f for f in r.findings if f.code != "MCP-OK"]
+            plane.registry.register(r.server, config_findings=findings)
 
     if not report.results:
         console.print("[dim]No MCP client configs found on this machine.[/]")
@@ -265,6 +272,20 @@ def servers_show(ref: str = typer.Argument(..., help="Server id or name.")) -> N
                 "; ".join(tool.findings) or "",
             )
         console.print(t)
+    if s.config_findings:
+        ct = Table(title="static config findings (scanner)")
+        ct.add_column("code", style="bold")
+        ct.add_column("severity")
+        ct.add_column("finding")
+        ct.add_column("remediation", style="dim")
+        for f in s.config_findings:
+            ct.add_row(
+                f.get("code", "?"),
+                _risk(str(f.get("severity", "info"))),
+                f.get("title", ""),
+                f.get("remediation", ""),
+            )
+        console.print(ct)
 
 
 @servers_app.command("approve")
@@ -427,12 +448,18 @@ def approvals_deny(approval_id: str, by: str = typer.Option("cli"), note: str | 
 def _decide(approval_id: str, approve: bool, by: str, note: str | None) -> None:
     plane = _plane()
     try:
-        a = plane.approvals.decide(approval_id, approve, by=by, note=note)
+        a = plane.approvals.decide(
+            approval_id, approve, by=by, note=note,
+            grant_ttl_seconds=plane.policy.settings.approval_grant_ttl_seconds,
+        )
     except KeyError:
         err.print(f"[red]no approval '{approval_id}'[/]")
         raise typer.Exit(1) from None
     word = "approved" if approve else "denied"
-    console.print(f"[{'green' if approve else 'red'}]{word}[/] {a.id} ({a.server_name}.{a.tool})")
+    extra = ""
+    if approve and a.expires_at:
+        extra = f" — grant valid until {a.expires_at.strftime('%H:%M:%S')} for the identical call"
+    console.print(f"[{'green' if approve else 'red'}]{word}[/] {a.id} ({a.server_name}.{a.tool}){extra}")
 
 
 # --------------------------------------------------------------------------- #

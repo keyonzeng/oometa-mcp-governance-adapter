@@ -7,6 +7,8 @@ denies it. This implements 'prefer explicit approval over hidden automation'.
 
 from __future__ import annotations
 
+from datetime import timedelta
+
 from mcp_control_plane.audit.service import AuditService
 from mcp_control_plane.models import (
     Approval,
@@ -18,11 +20,34 @@ from mcp_control_plane.models import (
 )
 from mcp_control_plane.storage.db import Database
 
+DEFAULT_GRANT_TTL_SECONDS = 600
+
 
 class ApprovalService:
     def __init__(self, db: Database, audit: AuditService | None = None):
         self.db = db
         self.audit = audit or AuditService(db)
+
+    def find_active_grant(self, ctx: CallContext) -> Approval | None:
+        """Return an approved, unexpired grant matching this *exact* call.
+
+        A grant is bound to (server, tool, exact arguments, agent, principal) so
+        that approving a call lets an identical retry proceed — but a *different*
+        call (other args/tool/agent) still requires its own approval.
+        """
+        digest = ctx.arguments_digest()
+        now = utcnow()
+        for a in self.db.list_approvals(status="approved", limit=200):
+            if (
+                a.is_active_grant(now)
+                and a.server_id == ctx.server.id
+                and a.tool == ctx.tool.name
+                and a.arguments_digest == digest
+                and a.agent == ctx.agent
+                and a.principal == ctx.principal
+            ):
+                return a
+        return None
 
     def request(self, ctx: CallContext, decision: Decision) -> Approval:
         approval = Approval(
@@ -32,6 +57,7 @@ class ApprovalService:
             server_name=ctx.server.name,
             tool=ctx.tool.name,
             arguments_preview=redact_arguments(ctx.arguments),
+            arguments_digest=ctx.arguments_digest(),
             reason=decision.reason,
             risk=decision.risk,
         )
@@ -51,7 +77,12 @@ class ApprovalService:
         return approval
 
     def decide(
-        self, approval_id: str, approve: bool, by: str = "cli", note: str | None = None
+        self,
+        approval_id: str,
+        approve: bool,
+        by: str = "cli",
+        note: str | None = None,
+        grant_ttl_seconds: int = DEFAULT_GRANT_TTL_SECONDS,
     ) -> Approval:
         approval = self.db.get_approval(approval_id)
         if approval is None:
@@ -60,6 +91,8 @@ class ApprovalService:
         approval.decided_at = utcnow()
         approval.decided_by = by
         approval.decision_note = note
+        if approve:
+            approval.expires_at = approval.decided_at + timedelta(seconds=grant_ttl_seconds)
         self.db.upsert_approval(approval)
         self.audit.record_event(
             "approval",

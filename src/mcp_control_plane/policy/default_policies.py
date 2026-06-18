@@ -83,6 +83,14 @@ def baseline_policy() -> Policy:
                 ),
             ),
             Rule(
+                id="approve-unknown-capability",
+                description="Quarantine tools whose capability we cannot determine",
+                effect=Effect.REQUIRE_APPROVAL,
+                priority=60,
+                reason="Tool capability is unknown (not-yet-trusted); needs human review",
+                when=Match(capabilities_any=[Capability.UNKNOWN]),
+            ),
+            Rule(
                 id="allow-readonly-on-approved",
                 description="Allow read-only tools on approved servers",
                 effect=Effect.ALLOW,
@@ -99,6 +107,7 @@ def baseline_policy() -> Policy:
                         Capability.DESTRUCTIVE,
                         Capability.EMAIL_SEND,
                         Capability.SECRETS,
+                        Capability.UNKNOWN,
                     ],
                 ),
             ),

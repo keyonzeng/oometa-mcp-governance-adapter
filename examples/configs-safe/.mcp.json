@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "filesystem-readonly": {
+      "command": "node",
+      "args": ["./vendor/mcp-fs/dist/server.js", "--root", "./workspace", "--read-only"]
+    },
+    "internal-api": {
+      "url": "https://mcp.internal.example.com/mcp",
+      "headers": { "Authorization": "Bearer ${INTERNAL_MCP_TOKEN}" }
+    }
+  }
+}

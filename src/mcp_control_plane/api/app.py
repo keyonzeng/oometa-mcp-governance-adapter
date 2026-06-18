@@ -11,7 +11,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -23,12 +23,14 @@ from mcp_control_plane.models import (
     MCPTool,
     RiskLevel,
     ServerStatus,
+    Transport,
 )
 from mcp_control_plane.policy.builtin import enrich_tool
 from mcp_control_plane.scanner import scan
 from mcp_control_plane.version import __version__
 
 STATIC_DIR = Path(__file__).parent.parent / "dashboard" / "static"
+_LOOPBACK_HOSTS = {"127.0.0.1", "::1", "localhost"}
 
 
 def require_auth(authorization: str | None = Header(default=None)) -> None:
@@ -94,6 +96,23 @@ def create_app(plane: ControlPlane | None = None) -> FastAPI:
 
     auth = [Depends(require_auth)]
 
+    @app.middleware("http")
+    async def localhost_only_without_token(request: Request, call_next):
+        """Enforce the security claim regardless of bind host: with no
+        ``MCPCP_API_TOKEN`` set, only loopback clients may reach the API. This
+        holds even if a user runs the uvicorn factory directly on 0.0.0.0.
+        """
+        if not plane.settings.api_token:
+            client_host = request.client.host if request.client else None
+            if client_host not in _LOOPBACK_HOSTS:
+                return JSONResponse(
+                    status_code=403,
+                    content={
+                        "detail": "non-local access requires MCPCP_API_TOKEN to be set",
+                    },
+                )
+        return await call_next(request)
+
     @app.get("/api/health")
     def health() -> dict:
         return {"status": "ok", "version": __version__}
@@ -117,9 +136,16 @@ def create_app(plane: ControlPlane | None = None) -> FastAPI:
 
     @app.post("/api/servers", dependencies=auth)
     def register_server(body: ServerIn) -> dict:
+        try:
+            transport = Transport(body.transport)
+        except ValueError:
+            raise HTTPException(
+                400, f"invalid transport '{body.transport}' (use stdio|http|sse)"
+            ) from None
         server = MCPServer(
             name=body.name,
             description=body.description,
+            transport=transport,
             command=body.command,
             args=body.args,
             env_keys=body.env_keys,

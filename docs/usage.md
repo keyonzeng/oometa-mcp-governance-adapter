@@ -6,12 +6,17 @@ A practical guide to installing `mcp-control-plane`, scanning your machine for M
 
 ## Installation
 
-Requires **Python 3.11+**. Install the CLI with `pipx` (recommended — isolated, on your PATH) or `pip`:
+Requires **Python 3.11+**. A PyPI release is coming soon; until then install from source with `pipx` (recommended — isolated, on your PATH) or `pip`:
 
 ```bash
-pipx install mcp-control-plane
-# or
-pip install mcp-control-plane
+# from source (current)
+pipx install git+https://github.com/TWe1v3/mcp-control-plane.git
+# for development
+git clone https://github.com/TWe1v3/mcp-control-plane.git && cd mcp-control-plane
+pip install -e ".[dev]"
+
+# once published to PyPI:
+# pipx install mcp-control-plane
 ```
 
 This provides the `mcpcp` command. Verify:

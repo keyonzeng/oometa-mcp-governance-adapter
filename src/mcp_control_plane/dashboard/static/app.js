@@ -353,6 +353,18 @@
       ? `<ul class="space-y-1.5">${s.risk_factors.map((f) => `<li class="flex gap-2 text-[13px]"><span class="text-[var(--text-mute)]">›</span><span>${esc(f)}</span></li>`).join("")}</ul>`
       : `<div class="text-[12px] text-[var(--text-mute)]">No notable risk factors.</div>`;
 
+    const cfHtml = (s.config_findings || []).length
+      ? `<div>
+          <div class="text-[11px] uppercase tracking-wide text-[var(--text-mute)] font-semibold mb-2">Static config findings (scanner)</div>
+          <div class="space-y-2">${s.config_findings.map((f) => `
+            <div class="panel-flat p-3">
+              <div class="flex items-center gap-2 mb-1">${riskBadge(f.severity)}<span class="mono text-[12px] font-semibold">${esc(f.code || "")}</span><span class="text-[13px]">${esc(f.title || "")}</span></div>
+              ${f.detail ? `<div class="text-[12px] text-[var(--text-dim)]">${esc(f.detail)}</div>` : ""}
+              ${f.remediation ? `<div class="text-[12px] text-[var(--text-mute)] mt-1">↳ ${esc(f.remediation)}</div>` : ""}
+            </div>`).join("")}</div>
+        </div>`
+      : "";
+
     const node = el("div", { class: "flex flex-col h-full" });
     node.innerHTML = `
       <div class="flex items-start justify-between gap-3 p-6 border-b border-[var(--border)]">
@@ -376,6 +388,7 @@
           <div class="flex items-center justify-between mb-2"><div class="text-[11px] uppercase tracking-wide text-[var(--text-mute)] font-semibold">Risk factors</div><span class="mono text-[13px] font-semibold" style="color:${RISK_HEX[(s.risk||'info').toLowerCase()]}">score ${s.risk_score ?? 0}</span></div>
           ${factorsHtml}
         </div>
+        ${cfHtml}
         <div>
           <div class="text-[11px] uppercase tracking-wide text-[var(--text-mute)] font-semibold mb-2">Tools (${(s.tools || []).length})</div>
           ${toolsHtml}

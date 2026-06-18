@@ -57,8 +57,8 @@ def test_secret_path_argument_denied():
 
 def test_strict_policy_denies_by_default():
     # Strict keeps the inherited 'allow readonly on approved' rule, so deny-by-default
-    # is observed on a server that is NOT approved (and an unmatched capability).
-    t = MCPTool(name="mystery", capabilities=[Capability.UNKNOWN], risk=RiskLevel.MEDIUM)
+    # is observed on a NOT-approved server with a capability no rule matches.
+    t = MCPTool(name="fetch", capabilities=[Capability.NETWORK], risk=RiskLevel.MEDIUM)
     d = evaluate(strict_policy(), _ctx(t, status=ServerStatus.DISCOVERED))
     assert d.effect == Effect.DENY
 
@@ -96,3 +96,12 @@ def test_arg_match_field_specific():
     assert ok
     bad, _ = m.evaluate(_ctx(t, args={"other": "http://x.ngrok.io"}))
     assert not bad
+
+
+def test_unknown_tool_on_approved_requires_approval():
+    # Regression: UNKNOWN capability must not be silently allowed, even on an
+    # approved server (consistency with "unknown == not-yet-trusted").
+    t = MCPTool(name="mystery", capabilities=[Capability.UNKNOWN], risk=RiskLevel.MEDIUM)
+    d = evaluate(baseline_policy(), _ctx(t, status=ServerStatus.APPROVED))
+    assert d.effect == Effect.REQUIRE_APPROVAL
+    assert d.matched_rule == "approve-unknown-capability"

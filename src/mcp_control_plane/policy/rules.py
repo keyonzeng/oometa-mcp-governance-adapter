@@ -126,6 +126,8 @@ class PolicySettings(BaseModel):
     unapproved_server_effect: Effect = Effect.REQUIRE_APPROVAL
     # If a winning ALLOW touches secrets, attach a redaction obligation.
     redact_secrets: bool = True
+    # How long an approval remains a re-usable grant for the identical call.
+    approval_grant_ttl_seconds: int = 600
 
 
 class Policy(BaseModel):

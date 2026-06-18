@@ -7,6 +7,7 @@ default_effect: deny
 settings:
   unapproved_server_effect: deny
   redact_secrets: true
+  approval_grant_ttl_seconds: 600
 rules:
 - id: deny-command-execution
   description: Block arbitrary command/code execution over MCP
@@ -91,6 +92,25 @@ rules:
   priority: 70
   risk: null
   obligations: []
+- id: approve-unknown-capability
+  description: Quarantine tools whose capability we cannot determine
+  effect: require_approval
+  when:
+    server_status: null
+    server_name: null
+    server_tags_any: null
+    tool_name: null
+    agent: null
+    capabilities_any:
+    - unknown
+    capabilities_all: null
+    capabilities_none: null
+    risk_at_least: null
+    arg_matches: null
+  reason: Tool capability is unknown (not-yet-trusted); needs human review
+  priority: 60
+  risk: null
+  obligations: []
 - id: allow-readonly-on-approved
   description: Allow read-only tools on approved servers
   effect: allow
@@ -112,6 +132,7 @@ rules:
     - destructive
     - messaging.send
     - secrets
+    - unknown
     risk_at_least: null
     arg_matches: null
   reason: Read-only tool on an approved server

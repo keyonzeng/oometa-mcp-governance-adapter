@@ -40,7 +40,9 @@
 ## 🚀 快速开始
 
 ```bash
-pip install mcp-control-plane        # Python 3.11+ （或：pipx install mcp-control-plane）
+# 从源码安装（PyPI 发布在即）。Python 3.11+
+pipx install git+https://github.com/TWe1v3/mcp-control-plane.git
+# …或开发安装：git clone … && pip install -e ".[dev]"
 
 # 1. 查看本机已经存在的 MCP 使用情况——无需任何配置
 mcpcp scan
@@ -204,6 +206,7 @@ mcpcp policy explain filesystem read_file --args '{"path": "~/.ssh/id_rsa"}'
 
 ```yaml
 # .github/workflows/mcp-config-scan.yml
+# PyPI 发布前：pip install git+https://github.com/TWe1v3/mcp-control-plane.git
 - run: pip install mcp-control-plane
 - run: mcpcp scan --ci --project . --fail-on high
 ```
