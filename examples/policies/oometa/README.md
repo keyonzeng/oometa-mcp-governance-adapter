@@ -12,3 +12,5 @@
 | `oometa-financial.yaml` | 金融行业 MCP 治理 | require_approval | PCI DSS + SOX |
 | `oometa-iso-42001.yaml` | ISO 42001 AI 管理体系 | deny | ISO 42001 Annex A.7 |
 | `oometa-baseline.yaml` | 通用企业基线 | require_approval | NIST AI RMF |
+| `oometa-rate-limit.yaml` | 速率限制 | allow | 防滥用/DoS |
+| `oometa-cost-tracking.yaml` | 成本追踪 | allow | 预算控制/告警 |
