@@ -1,0 +1,58 @@
+# OOMeta HIPAA 合规策略模板
+# 适用于 HIPAA §164.312 (Access Control / Audit Controls / Integrity)
+version: 1
+name: oometa-hipaa
+description: 'HIPAA compliant MCP governance for PHI environments: deny-by-default,
+  ePHI access logging, minimum necessary standard enforced, breach notification triggers.'
+default_effect: deny
+settings:
+  unapproved_server_effect: deny
+  redact_secrets: true
+  approval_grant_ttl_seconds: 120
+  audit_log_retention_days: 730
+rules:
+- id: hipaa-deny-ephiexfil
+  description: '§164.312(a)(1): Block ePHI exfiltration via MCP'
+  effect: deny
+  priority: 100
+  when:
+    arg_matches:
+    - field: '*'
+      regex: (?i)(ssn|patient|medical|phi|ePHI|diagnosis|treatment|health_record|hipaa)
+      description: potential PHI reference
+  reason: HIPAA §164.312(a)(1) — ePHI access control
+  obligations:
+  - audit: mandatory
+  - notify: compliance_officer
+
+- id: hipaa-approve-write
+  description: '§164.312(c)(1): Require integrity controls for PHI writes'
+  effect: require_approval
+  priority: 85
+  when:
+    capabilities_any:
+    - filesystem.write
+    - database.write
+  reason: HIPAA §164.312(c)(1) — integrity controls required
+  obligations:
+  - audit: mandatory
+
+- id: hipaa-allow-readonly-audited
+  description: '§164.312(b): Allow read-only with mandatory audit'
+  effect: allow
+  priority: 40
+  when:
+    server_status:
+    - approved
+    capabilities_none:
+    - filesystem.write
+    - database.write
+    - process.exec
+    - code.execution
+    - payment
+    - destructive
+    - messaging.send
+    - secrets
+  reason: HIPAA §164.312(b) — audited read-only access
+  obligations:
+  - audit: mandatory

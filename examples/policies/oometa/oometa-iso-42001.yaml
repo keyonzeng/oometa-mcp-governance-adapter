@@ -1,0 +1,57 @@
+# OOMeta ISO 42001 合规策略模板
+# 适用于 ISO 42001 Annex A.7 (AI System Change Management) + A.8 (AI System Monitoring)
+version: 1
+name: oometa-iso-42001
+description: 'ISO 42001 AI management system compliant MCP governance: AI system
+  change control, continuous monitoring, risk-based access, audit evidence generation.'
+default_effect: deny
+settings:
+  unapproved_server_effect: deny
+  redact_secrets: true
+  approval_grant_ttl_seconds: 300
+  audit_log_retention_days: 730
+rules:
+- id: iso42001-deny-unreviewed
+  description: 'A.7.2: Block unreviewed AI system access'
+  effect: deny
+  priority: 100
+  when:
+    server_status:
+    - unreviewed
+    - quarantined
+  reason: ISO 42001 A.7.2 — unreviewed AI system
+  obligations:
+  - audit: mandatory
+
+- id: iso42001-approve-change
+  description: 'A.7.3: Require change management approval'
+  effect: require_approval
+  priority: 85
+  when:
+    capabilities_any:
+    - destructive
+    - database.write
+    - filesystem.write
+  reason: ISO 42001 A.7.3 — AI system change control
+  obligations:
+  - audit: mandatory
+
+- id: iso42001-allow-monitored
+  description: 'A.8: Allow monitored read-only access'
+  effect: allow
+  priority: 40
+  when:
+    server_status:
+    - approved
+    capabilities_none:
+    - filesystem.write
+    - database.write
+    - process.exec
+    - code.execution
+    - payment
+    - destructive
+    - messaging.send
+    - secrets
+  reason: ISO 42001 A.8 — monitored AI system access
+  obligations:
+  - audit: mandatory

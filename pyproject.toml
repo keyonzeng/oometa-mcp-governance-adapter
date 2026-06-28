@@ -3,23 +3,24 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "mcp-control-plane"
+name = "oometa-mcp-governance-adapter"
 version = "0.1.0"
-description = "Governance & security control plane for Model Context Protocol (MCP) adoption: registry, gateway, policy engine, approvals, audit, and config scanner."
+description = "OOMeta MCP Governance Adapter — cross-vendor governance, policy enforcement, and audit aggregation for enterprise MCP deployments. Fork of mcp-control-plane with OOMeta branding, compliance templates, and multi-vendor policy library."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "Apache-2.0" }
-authors = [{ name = "mcp-control-plane contributors" }]
+authors = [{ name = "OOMeta AI" }, { name = "mcp-control-plane contributors" }]
 keywords = [
     "mcp",
     "model-context-protocol",
     "ai-security",
     "ai-governance",
-    "llm",
-    "agents",
+    "oometa",
     "policy-as-code",
     "gateway",
     "audit",
+    "cross-vendor",
+    "compliance",
 ]
 classifiers = [
     "Development Status :: 4 - Beta",

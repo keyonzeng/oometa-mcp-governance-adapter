@@ -1,0 +1,72 @@
+# OOMeta 企业基线策略模板
+# 适用于通用企业 MCP 治理 — 平衡安全与生产力
+version: 1
+name: oometa-baseline
+description: 'OOMeta enterprise baseline: secure-by-default with productivity balance.
+  Allow read-only on approved servers, require approval for writes/sends, deny exec
+  and secret exfiltration. Maps to NIST AI RMF GM-1/GM-2.'
+default_effect: require_approval
+settings:
+  unapproved_server_effect: deny
+  redact_secrets: true
+  approval_grant_ttl_seconds: 600
+rules:
+- id: deny-command-execution
+  description: Block arbitrary command/code execution over MCP
+  effect: deny
+  priority: 100
+  when:
+    capabilities_any:
+    - process.exec
+    - code.execution
+  reason: Command/code execution via MCP is not permitted
+  obligations:
+  - audit: mandatory
+
+- id: deny-secret-exfiltration
+  description: Block tool calls referencing sensitive paths/credentials
+  effect: deny
+  priority: 95
+  when:
+    arg_matches:
+    - field: '*'
+      regex: (?i)(/\\.ssh/|id_rsa|\\.env\\b|/\\.aws/|BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY)
+      description: argument references secret files
+  reason: Sensitive path or credential material referenced
+  obligations:
+  - audit: mandatory
+
+- id: approve-destructive-and-spend
+  description: Require approval for destructive, financial or outbound-messaging tools
+  effect: require_approval
+  priority: 70
+  when:
+    capabilities_any:
+    - destructive
+    - payment
+    - messaging.send
+    - database.write
+    - filesystem.write
+  reason: High-impact action requires approval
+  obligations:
+  - audit: mandatory
+
+- id: allow-readonly-on-approved
+  description: Allow read-only tools on approved servers
+  effect: allow
+  priority: 40
+  when:
+    server_status:
+    - approved
+    capabilities_none:
+    - filesystem.write
+    - database.write
+    - process.exec
+    - code.execution
+    - payment
+    - destructive
+    - messaging.send
+    - secrets
+  reason: Read-only tool on an approved server
+  obligations:
+  - audit: true

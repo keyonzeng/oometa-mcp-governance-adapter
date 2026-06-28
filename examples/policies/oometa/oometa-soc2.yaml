@@ -1,0 +1,71 @@
+# OOMeta SOC 2 合规策略模板
+# 适用于 SOC 2 CC6 (Logical & Physical Access) + CC7 (Monitoring) 环境
+version: 1
+name: oometa-soc2
+description: 'SOC 2 compliant MCP governance: deny-by-default, access logging required,
+  sensitive data exfiltration blocked, change management approval required.'
+default_effect: deny
+settings:
+  unapproved_server_effect: deny
+  redact_secrets: true
+  approval_grant_ttl_seconds: 300
+  audit_log_retention_days: 365
+rules:
+- id: soc2-deny-unauth-access
+  description: 'CC6.1: Block unauthenticated tool access'
+  effect: deny
+  priority: 100
+  when:
+    agent: null
+    capabilities_any: null
+    arg_matches: null
+  reason: SOC 2 CC6.1 — unauthenticated agent not permitted
+  obligations:
+  - audit: mandatory
+
+- id: soc2-deny-secret-exfil
+  description: 'CC6.7: Block sensitive data exfiltration'
+  effect: deny
+  priority: 95
+  when:
+    arg_matches:
+    - field: '*'
+      regex: (?i)(/\\.ssh/|id_rsa|\\.env\\b|/\\.aws/|BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY|password|secret|token|api_key)
+      description: potential credential exposure
+  reason: SOC 2 CC6.7 — credential material blocked
+  obligations:
+  - audit: mandatory
+  - notify: security
+
+- id: soc2-approve-change-mgmt
+  description: 'CC8.1: Require approval for state-changing operations'
+  effect: require_approval
+  priority: 80
+  when:
+    capabilities_any:
+    - destructive
+    - database.write
+    - filesystem.write
+  reason: SOC 2 CC8.1 — change management requires approval
+  obligations:
+  - audit: mandatory
+
+- id: soc2-allow-readonly
+  description: 'Allow read-only tools on approved servers'
+  effect: allow
+  priority: 40
+  when:
+    server_status:
+    - approved
+    capabilities_none:
+    - filesystem.write
+    - database.write
+    - process.exec
+    - code.execution
+    - payment
+    - destructive
+    - messaging.send
+    - secrets
+  reason: SOC 2 compliant read-only access
+  obligations:
+  - audit: mandatory

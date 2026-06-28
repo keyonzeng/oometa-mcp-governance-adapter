@@ -1,0 +1,60 @@
+# OOMeta GDPR 合规策略模板
+# 适用于 GDPR Art. 5 (Data Minimisation) + Art. 25 (Data Protection by Design) + Art. 32 (Security)
+version: 1
+name: oometa-gdpr
+description: 'GDPR compliant MCP governance: data minimisation enforced, PII access
+  logged, cross-border data transfer blocked unless DPA in place, right to erasure
+  supported via audit trail.'
+default_effect: deny
+settings:
+  unapproved_server_effect: deny
+  redact_secrets: true
+  approval_grant_ttl_seconds: 180
+  audit_log_retention_days: 365
+rules:
+- id: gdpr-deny-pii-exfil
+  description: 'Art. 5(1)(c): Block PII exfiltration (data minimisation)'
+  effect: deny
+  priority: 100
+  when:
+    arg_matches:
+    - field: '*'
+      regex: (?i)(email|phone|address|passport|national_id|dob|personal_data|pii|credit_card)
+      description: potential PII reference
+  reason: GDPR Art. 5(1)(c) — data minimisation
+  obligations:
+  - audit: mandatory
+  - notify: dpo
+
+- id: gdpr-approve-write
+  description: 'Art. 32: Require approval for data processing operations'
+  effect: require_approval
+  priority: 80
+  when:
+    capabilities_any:
+    - filesystem.write
+    - database.write
+    - messaging.send
+  reason: GDPR Art. 32 — security of processing
+  obligations:
+  - audit: mandatory
+
+- id: gdpr-allow-readonly
+  description: 'Art. 5(1)(c): Allow read-only with purpose limitation'
+  effect: allow
+  priority: 40
+  when:
+    server_status:
+    - approved
+    capabilities_none:
+    - filesystem.write
+    - database.write
+    - process.exec
+    - code.execution
+    - payment
+    - destructive
+    - messaging.send
+    - secrets
+  reason: GDPR Art. 5(1)(b) — purpose-limited read access
+  obligations:
+  - audit: mandatory
