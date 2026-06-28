@@ -1,0 +1,62 @@
+# OOMeta 成本追踪策略模板
+# 适用于 MCP server 调用成本核算和预算控制
+version: 1
+name: oometa-cost-tracking
+description: 'Cost tracking and budget control for MCP governance: per-agent cost
+  allocation, per-server budget limits, cost anomaly detection, and spend alerts.'
+default_effect: allow
+settings:
+  unapproved_server_effect: deny
+  redact_secrets: true
+  approval_grant_ttl_seconds: 600
+  cost_tracking:
+    enabled: true
+    currency: USD
+    default_budget:
+      daily: 100
+      monthly: 2000
+    alert_thresholds:
+      - level: warn
+        threshold_percent: 80
+      - level: critical
+        threshold_percent: 95
+rules:
+- id: cost-budget-exceeded
+  description: Block calls when monthly budget exceeded
+  effect: deny
+  priority: 90
+  when:
+    agent: null
+    capabilities_any: null
+  cost_check:
+    budget_period: monthly
+    max_cost: 2000
+  reason: Monthly MCP budget exceeded
+  obligations:
+  - audit: mandatory
+  - notify: finance
+
+- id: cost-approve-expensive
+  description: Require approval for expensive tool calls
+  effect: require_approval
+  priority: 70
+  when:
+    capabilities_any:
+    - payment
+    - database.write
+  cost_check:
+    max_cost_per_call: 10
+  reason: Expensive operation requires cost approval
+  obligations:
+  - audit: mandatory
+
+- id: cost-track-all
+  description: Track all tool calls for cost attribution
+  effect: allow
+  priority: 10
+  when:
+    capabilities_any: null
+  reason: Cost tracking enabled
+  obligations:
+  - audit: true
+  - cost_track: true

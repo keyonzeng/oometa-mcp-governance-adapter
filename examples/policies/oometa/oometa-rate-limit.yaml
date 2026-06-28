@@ -1,0 +1,61 @@
+# OOMeta 速率限制策略模板
+# 适用于 MCP server 调用频率控制 — 防止滥用和 DoS
+version: 1
+name: oometa-rate-limit
+description: 'Rate limiting policy template for MCP governance: per-agent, per-server,
+  and per-tool rate limits with burst allowance and automatic throttling.'
+default_effect: allow
+settings:
+  unapproved_server_effect: deny
+  redact_secrets: true
+  approval_grant_ttl_seconds: 600
+  rate_limits:
+    default:
+      requests_per_minute: 60
+      burst: 10
+      cooldown_seconds: 30
+rules:
+- id: rate-limit-global
+  description: Global rate limit per agent
+  effect: deny
+  priority: 90
+  when:
+    agent: null
+    capabilities_any: null
+  rate_limit:
+    requests_per_minute: 120
+    burst: 20
+  reason: Global rate limit exceeded — too many requests per minute
+  obligations:
+  - audit: true
+
+- id: rate-limit-write
+  description: Stricter rate limit for write operations
+  effect: deny
+  priority: 85
+  when:
+    capabilities_any:
+    - filesystem.write
+    - database.write
+  rate_limit:
+    requests_per_minute: 10
+    burst: 3
+  reason: Write operation rate limit exceeded
+  obligations:
+  - audit: mandatory
+
+- id: rate-limit-sensitive
+  description: Rate limit for sensitive data access
+  effect: deny
+  priority: 80
+  when:
+    capabilities_any:
+    - secrets
+    - payment
+  rate_limit:
+    requests_per_minute: 5
+    burst: 2
+  reason: Sensitive operation rate limit exceeded
+  obligations:
+  - audit: mandatory
+  - notify: security
